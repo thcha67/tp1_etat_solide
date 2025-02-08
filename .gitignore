@@ -1,2 +1,3 @@
 venv/
+.venv/
 __pycache__/tds2Danimation_h25.cpython-39.pyc
