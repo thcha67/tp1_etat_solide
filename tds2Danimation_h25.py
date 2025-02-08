@@ -83,7 +83,8 @@ def checkCollisions():
 ## ATTENTION : la boucle laisse aller l'animation aussi longtemps que souhaité, assurez-vous de savoir comment interrompre vous-même correctement (souvent `ctrl+c`, mais peut varier)
 ## ALTERNATIVE : vous pouvez bien sûr remplacer la boucle "while" par une boucle "for" avec un nombre d'itérations suffisant pour obtenir une bonne distribution statistique à l'équilibre
 
-while True:
+c = 0 
+while c < 200:
     rate(300)  # limite la vitesse de calcul de la simulation pour que l'animation soit visible à l'oeil humain!
 
     #### DÉPLACE TOUTES LES SPHÈRES D'UN PAS SPATIAL deltax
@@ -146,3 +147,5 @@ while True:
         p[j] = pcomj+mass*Vcom
         apos[i] = posi+(p[i]/mass)*deltat # move forward deltat in time, ramenant au même temps où sont rendues les autres sphères dans l'itération
         apos[j] = posj+(p[j]/mass)*deltat
+
+    c += 1
