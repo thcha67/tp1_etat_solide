@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 
 # Déclaration de variables influençant le temps d'exécution de la simulation
 Natoms = 200  # change this to have more or fewer atoms
-dt = 1E-5  # pas d'incrémentation temporel
+dt = 1E-6 # pas d'incrémentation temporel
 
 # Déclaration de variables physiques "Typical values"
 DIM = 2 #Nombre de degrés de liberté de la simulation 
@@ -81,7 +81,7 @@ def checkCollisions():
 
 followParticuleList = []
 
-def followParticule(hitlist, accumulatedDistance, accumulatedTime):
+def followParticule(hitlist, accumulatedDistance, accumulatedTime, previousCollision):
     particuleNumber = 1 #numéro de la particule que nous suivrons
     vitesseParticule = p[particuleNumber]/mass
     
@@ -92,23 +92,24 @@ def followParticule(hitlist, accumulatedDistance, accumulatedTime):
     hit = False
     for ij in hitlist:
         if ij[0] == particuleNumber or ij[1] == particuleNumber:
-            print(ij)
             hit = True
+            currentCollision = ij
     
     if hit:
-        if accumulatedDistance != 0 and accumulatedTime != 0: #avoids repetition of same collision
+        if previousCollision != currentCollision: #avoids repetition of same collision
             followParticuleList.append([accumulatedDistance, accumulatedTime])
-        return 0, 0
+            previousCollision = currentCollision
+        return 0, 0, previousCollision
     else:
-        return accumulatedDistance, accumulatedTime
+        return accumulatedDistance, accumulatedTime, previousCollision
 
 # ### BOUCLE PRINCIPALE POUR L'ÉVOLUTION TEMPORELLE DE PAS dt ####
 ## ATTENTION : la boucle laisse aller l'animation aussi longtemps que souhaité, assurez-vous de savoir comment interrompre vous-même correctement (souvent `ctrl+c`, mais peut varier)
 ## ALTERNATIVE : vous pouvez bien sûr remplacer la boucle "while" par une boucle "for" avec un nombre d'itérations suffisant pour obtenir une bonne distribution statistique à l'équilibre
 
 c = 0 
-accumulatedDistance, accumulatedTime = 0, 0
-while c < 200:
+accumulatedDistance, accumulatedTime, previousCollision = 0, 0, [0, 0]
+while c < 500:
     rate(300)  # limite la vitesse de calcul de la simulation pour que l'animation soit visible à l'oeil humain!
 
     #### DÉPLACE TOUTES LES SPHÈRES D'UN PAS SPATIAL deltax
@@ -132,7 +133,7 @@ while c < 200:
     #### LET'S FIND THESE COLLISIONS!!! ####
     hitlist = checkCollisions()
 
-    accumulatedDistance, accumulatedTime = followParticule(hitlist, accumulatedDistance, accumulatedTime)
+    accumulatedDistance, accumulatedTime, previousCollision = followParticule(hitlist, accumulatedDistance, accumulatedTime, previousCollision)
 
     #### CONSERVE LA QUANTITÉ DE MOUVEMENT AUX COLLISIONS ENTRE SPHÈRES ####
     for ij in hitlist:
