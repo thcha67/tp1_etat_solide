@@ -13,6 +13,7 @@ from vpython import *
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 # win = 500 # peut aider à définir la taille d'un autre objet visuel comme un histogramme proportionnellement à la taille du canevas.
 
@@ -81,13 +82,14 @@ def checkCollisions():
 
 followParticuleList = []
 
-def followParticule(hitlist, accumulatedDistance, accumulatedTime, previousCollision):
+def followParticule(hitlist, accumulatedDistanceX, accumulatedDistanceY, accumulatedDistanceZ, accumulatedTime, previousCollision):
     particuleNumber = 1 #numéro de la particule que nous suivrons
     vitesseParticule = p[particuleNumber]/mass
     
     accumulatedTime += dt
-    distanceTravelled = mag(vitesseParticule)*dt
-    accumulatedDistance += distanceTravelled
+    accumulatedDistanceX += vitesseParticule.x*dt
+    accumulatedDistanceY += vitesseParticule.y*dt
+    accumulatedDistanceZ += vitesseParticule.z*dt
 
     hit = False
     for ij in hitlist:
@@ -97,20 +99,20 @@ def followParticule(hitlist, accumulatedDistance, accumulatedTime, previousColli
     
     if hit:
         if previousCollision != currentCollision: #avoids repetition of same collision
-            followParticuleList.append([accumulatedDistance, accumulatedTime])
+            followParticuleList.append([accumulatedDistanceX, accumulatedDistanceY, accumulatedDistanceZ, accumulatedTime])
             previousCollision = currentCollision
-        return 0, 0, previousCollision
+        return 0, 0, 0, 0, previousCollision
     else:
-        return accumulatedDistance, accumulatedTime, previousCollision
+        return accumulatedDistanceX, accumulatedDistanceY, accumulatedDistanceZ, accumulatedTime, previousCollision
 
 # ### BOUCLE PRINCIPALE POUR L'ÉVOLUTION TEMPORELLE DE PAS dt ####
 ## ATTENTION : la boucle laisse aller l'animation aussi longtemps que souhaité, assurez-vous de savoir comment interrompre vous-même correctement (souvent `ctrl+c`, mais peut varier)
 ## ALTERNATIVE : vous pouvez bien sûr remplacer la boucle "while" par une boucle "for" avec un nombre d'itérations suffisant pour obtenir une bonne distribution statistique à l'équilibre
 
-c = 0 
-accumulatedDistance, accumulatedTime, previousCollision = 0, 0, [0, 0]
-while c < 500:
-    rate(300)  # limite la vitesse de calcul de la simulation pour que l'animation soit visible à l'oeil humain!
+n_iterations = 30000
+accumulatedDistanceX, accumulatedDistanceY, accumulatedDistanceZ, accumulatedTime, previousCollision = 0, 0, 0, 0, [0, 0]
+for _ in tqdm(range(n_iterations)):
+    #rate(300)  # limite la vitesse de calcul de la simulation pour que l'animation soit visible à l'oeil humain!
 
     #### DÉPLACE TOUTES LES SPHÈRES D'UN PAS SPATIAL deltax
     vitesse = []   # vitesse instantanée de chaque sphère
@@ -133,7 +135,7 @@ while c < 500:
     #### LET'S FIND THESE COLLISIONS!!! ####
     hitlist = checkCollisions()
 
-    accumulatedDistance, accumulatedTime, previousCollision = followParticule(hitlist, accumulatedDistance, accumulatedTime, previousCollision)
+    accumulatedDistanceX, accumulatedDistanceY, accumulatedDistanceZ, accumulatedTime, previousCollision = followParticule(hitlist, accumulatedDistanceX, accumulatedDistanceY, accumulatedDistanceZ, accumulatedTime, previousCollision)
 
     #### CONSERVE LA QUANTITÉ DE MOUVEMENT AUX COLLISIONS ENTRE SPHÈRES ####
     for ij in hitlist:
@@ -174,5 +176,3 @@ while c < 500:
         p[j] = pcomj+mass*Vcom
         apos[i] = posi+(p[i]/mass)*deltat # move forward deltat in time, ramenant au même temps où sont rendues les autres sphères dans l'itération
         apos[j] = posj+(p[j]/mass)*deltat
-
-    c += 1
