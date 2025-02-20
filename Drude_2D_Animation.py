@@ -11,9 +11,7 @@
 
 from vpython import *
 import numpy as np
-import math
-import matplotlib.pyplot as plt
-from scipy.stats import maxwell
+from tqdm import tqdm
 
 # win = 500 # peut aider à définir la taille d'un autre objet visuel comme un histogramme proportionnellement à la taille du canevas.
 
@@ -113,9 +111,11 @@ def checkCollisions() -> list[tuple[int, int]]:
 ## ATTENTION : la boucle laisse aller l'animation aussi longtemps que souhaité, assurez-vous de savoir comment interrompre vous-même correctement (souvent `ctrl+c`, mais peut varier)
 ## ALTERNATIVE : vous pouvez bien sûr remplacer la boucle "while" par une boucle "for" avec un nombre d'itérations suffisant pour obtenir une bonne distribution statistique à l'équilibre
 
-c = 0 
-while c < 2000:
-    rate(300)  # limite la vitesse de calcul de la simulation pour que l'animation soit visible à l'oeil humain!
+momentum_averages = []
+
+j = 10000 # nombre d'itérations
+for _ in tqdm(range(j)):
+    #rate(300)  # limite la vitesse de calcul de la simulation pour que l'animation soit visible à l'oeil humain!
 
     #### DÉPLACE TOUTES LES SPHÈRES D'UN PAS SPATIAL deltax
     List_Vitesse_Atoms: list[vector] = []   # vitesse instantanée de chaque sphère
@@ -149,12 +149,14 @@ while c < 2000:
                 List_Momentum_Atoms[Atom_1].y =  -abs(List_Momentum_Atoms[Atom_1].y)  # renverse composante y au mur du haut
 
 
-    momentum_average_squared = 0
+    momentum_average = 0
     for idx in range(Natoms):
-        momentum_average_squared += mag(List_Momentum_Atoms[idx])
-    momentum_average_squared /= Natoms
-    T = (momentum_average_squared**2) / (mass * DIM * k)  # température moyenne de l'ensemble de particules
-    print(T)
+        momentum_average += mag(List_Momentum_Atoms[idx])
+    momentum_average /= Natoms
+
+    momentum_averages.append(momentum_average)
+
+    T = (momentum_average**2) / (mass * DIM * k)  # température moyenne de l'ensemble de particules
 
     #### LET'S FIND THESE COLLISIONS!!! ####
     hitlist: list[tuple[int, int]] = checkCollisions()
@@ -179,12 +181,11 @@ while c < 2000:
         new_p_x_electron = new_momentum_electron_norm * np.cos(theta)
         new_p_y_electron = new_momentum_electron_norm * np.sin(theta)
         new_p_z_electron = 0
-        new_momentum_electron = vector(new_p_x_electron, new_p_y_electron, new_p_z_electron)
+
+        new_momentum_electron = vector(new_p_x_electron.item(), new_p_y_electron.item(), new_p_z_electron)
 
         List_Momentum_Atoms[electron] = new_momentum_electron
+
         List_Momentum_Atoms[coeur] = vector(0,0,0)  # le coeur ionique reste immobile
 
         List_Position_Atom[electron] = pos_electron + List_Momentum_Atoms[electron]/mass * dt
-
-
-    c += 1
