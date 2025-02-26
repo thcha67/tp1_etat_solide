@@ -80,25 +80,38 @@ def checkCollisions():
                 hitlist.append([i,j]) # liste numérotant toutes les paires de sphères en collision
     return hitlist
 
-followParticuleList = []
+followParticuleList: list[list[float, float, float, float]] = []
 
-def followParticule(hitlist, accumulatedDistanceX, accumulatedDistanceY, accumulatedDistanceZ, accumulatedTime, previousCollision):
-    particuleNumber = 1 #numéro de la particule que nous suivrons
-    vitesseParticule = p[particuleNumber]/mass
+def followParticule(hitlist, accumulatedDistanceX, accumulatedDistanceY, accumulatedDistanceZ, accumulatedTime, previousCollision) -> tuple:
+    """
+    Fonction qui permet de suivre une particule en particulier et d'accumuler sa distance parcourue et le temps écoulé
+    entre chaque collision avec une autre particule.
+
+    Args:
+    hitlist (list): liste des collisions entre les particules
+    accumulatedDistanceX (float): distance parcourue en x
+    accumulatedDistanceY (float): distance parcourue en y
+    accumulatedDistanceZ (float): distance parcourue en z
+    accumulatedTime (float): temps écoulé
+    previousCollision (list): collision précédente 
+    """
+    particuleNumber = 1 # numéro de la particule que nous suivrons
+    vitesseParticule = p[particuleNumber]/mass # p/m = v
     
-    accumulatedTime += dt
-    accumulatedDistanceX += vitesseParticule.x*dt
+    accumulatedTime += dt # temps depuis la dernière itération
+    accumulatedDistanceX += vitesseParticule.x*dt # incrément de distance dans les 3 directions
     accumulatedDistanceY += vitesseParticule.y*dt
     accumulatedDistanceZ += vitesseParticule.z*dt
 
     hit = False
-    for ij in hitlist:
+    
+    for ij in hitlist: # trouve quelle collision de la hitlist concerne la particule actuelle
         if ij[0] == particuleNumber or ij[1] == particuleNumber:
             hit = True
             currentCollision = ij
     
     if hit:
-        if previousCollision != currentCollision: #avoids repetition of same collision
+        if previousCollision != currentCollision: # évite de répéter une même collision
             followParticuleList.append([accumulatedDistanceX, accumulatedDistanceY, accumulatedDistanceZ, accumulatedTime])
             previousCollision = currentCollision
         return 0, 0, 0, 0, previousCollision
@@ -109,7 +122,7 @@ def followParticule(hitlist, accumulatedDistanceX, accumulatedDistanceY, accumul
 ## ATTENTION : la boucle laisse aller l'animation aussi longtemps que souhaité, assurez-vous de savoir comment interrompre vous-même correctement (souvent `ctrl+c`, mais peut varier)
 ## ALTERNATIVE : vous pouvez bien sûr remplacer la boucle "while" par une boucle "for" avec un nombre d'itérations suffisant pour obtenir une bonne distribution statistique à l'équilibre
 
-n_iterations = 30000
+n_iterations = 3000
 accumulatedDistanceX, accumulatedDistanceY, accumulatedDistanceZ, accumulatedTime, previousCollision = 0, 0, 0, 0, [0, 0]
 for _ in tqdm(range(n_iterations)):
     #rate(300)  # limite la vitesse de calcul de la simulation pour que l'animation soit visible à l'oeil humain!
@@ -136,7 +149,7 @@ for _ in tqdm(range(n_iterations)):
     hitlist = checkCollisions()
 
     accumulatedDistanceX, accumulatedDistanceY, accumulatedDistanceZ, accumulatedTime, previousCollision = followParticule(hitlist, accumulatedDistanceX, accumulatedDistanceY, accumulatedDistanceZ, accumulatedTime, previousCollision)
-
+    
     #### CONSERVE LA QUANTITÉ DE MOUVEMENT AUX COLLISIONS ENTRE SPHÈRES ####
     for ij in hitlist:
 
