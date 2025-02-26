@@ -24,7 +24,7 @@ args = parser.parse_args()
 # win = 500 # peut aider à définir la taille d'un autre objet visuel comme un histogramme proportionnellement à la taille du canevas.
 
 # Déclaration de variables influençant le temps d'exécution de la simulation
-Nelectrons = 500  # change this to have more or fewer electrons
+Nelectrons = 100  # change this to have more or fewer electrons
 dt = 1E-7  # pas d'incrémentation temporel
 Nions = 16  # nombre de coeurs ioniques
 
@@ -228,7 +228,6 @@ for _ in tqdm(range(j)):
             new_position = position + List_Momentum_Electrons[no_hit]/mass * dt
 
             List_Position_Electrons[no_hit] = new_position
-
 
     momentum_averages.append(momentum_average)
     position_x_averages.append(np.mean([List_Position_Electrons[i].x for i in range(Nelectrons)]))

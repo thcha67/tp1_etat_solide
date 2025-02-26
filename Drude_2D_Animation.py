@@ -16,7 +16,7 @@ from tqdm import tqdm
 # win = 500 # peut aider à définir la taille d'un autre objet visuel comme un histogramme proportionnellement à la taille du canevas.
 
 # Déclaration de variables influençant le temps d'exécution de la simulation
-Natoms = 300  # change this to have more or fewer atoms
+Natoms = 100  # change this to have more or fewer atoms
 dt = 1E-7  # pas d'incrémentation temporel
 Ncoeurs = 16  # nombre de coeurs ioniques
 
@@ -113,7 +113,7 @@ def checkCollisions() -> list[tuple[int, int]]:
 
 momentum_averages = []
 
-j = 5000 # nombre d'itérations
+j = 10000 # nombre d'itérations
 for _ in tqdm(range(j)):
     #rate(300)  # limite la vitesse de calcul de la simulation pour que l'animation soit visible à l'oeil humain!
 
