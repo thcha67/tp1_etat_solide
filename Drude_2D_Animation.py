@@ -112,6 +112,7 @@ def checkCollisions() -> list[tuple[int, int]]:
 ## ALTERNATIVE : vous pouvez bien sûr remplacer la boucle "while" par une boucle "for" avec un nombre d'itérations suffisant pour obtenir une bonne distribution statistique à l'équilibre
 
 momentum_averages = []
+momentum_one_particle = []
 
 j = 10000 # nombre d'itérations
 for _ in tqdm(range(j)):
@@ -155,6 +156,7 @@ for _ in tqdm(range(j)):
     momentum_average /= Natoms
 
     momentum_averages.append(momentum_average)
+    momentum_one_particle.append(mag(List_Momentum_Atoms[0]))
 
     T = (momentum_average**2) / (mass * DIM * k)  # température moyenne de l'ensemble de particules
 
