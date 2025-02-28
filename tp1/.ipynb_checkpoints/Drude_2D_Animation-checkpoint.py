@@ -11,26 +11,28 @@
 
 from vpython import *
 import numpy as np
-import math
-import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 # win = 500 # peut aider à définir la taille d'un autre objet visuel comme un histogramme proportionnellement à la taille du canevas.
 
 # Déclaration de variables influençant le temps d'exécution de la simulation
-Natoms = 200  # change this to have more or fewer atoms
-dt = 1E-5  # pas d'incrémentation temporel
+Natoms = 100  # change this to have more or fewer atoms
+dt = 1E-7  # pas d'incrémentation temporel
+Ncoeurs = 16  # nombre de coeurs ioniques
 
 # Déclaration de variables physiques "Typical values"
 DIM = 2 #Nombre de degrés de liberté de la simulation 
-mass = 4E-3/6E23 # helium mass
+#mass = 4E-3/6E23 # helium mass
+mass = 9.10938356*10**(-31) # masse de l'électron
 Ratom = 0.01 # wildly exaggerated size of an atom
+Rcoeur = 0.01 # wildly exaggerated size of an atom
 k = 1.4E-23 # Boltzmann constant
 T = 300 # around room temperature
 
 #### CANEVAS DE FOND ####
 L = 1 # container is a cube L on a side
 gray = color.gray(0.7) # color of edges of container and spheres below
-animation = canvas( width=750, height=500) # , align='left')
+animation = canvas(width=750, height=500) # , align='left')
 animation.range = L
 # animation.title = 'Théorie cinétique des gaz parfaits'
 # s = """  Simulation de particules modélisées en sphères dures pour représenter leur trajectoire ballistique avec collisions. Une sphère est colorée et grossie seulement pour l’effet visuel permettant de suivre sa trajectoire plus facilement dans l'animation, sa cinétique est identique à toutes les autres particules.
@@ -52,6 +54,7 @@ List_Position_Atom: list[vector] = [] # position des sphères
 List_Index_Atom: list[int] = [] # index des sphères
 pavg = sqrt(2*mass*(DIM/2)*k*T) # average kinetic energy in 3D p**2/(2mass) = (3/2)kT : Principe de l'équipartition de l'énergie en thermodynamique statistique classique
 
+
 for Atom_1 in range(Natoms):
     # liste de l'index de chaque sphère
     List_Index_Atom.append(Atom_1)
@@ -65,6 +68,7 @@ for Atom_1 in range(Natoms):
     else: 
         List_Atoms_Obj.append(simple_sphere(pos=vector(x,y,z), radius=Ratom, color=gray))
 
+
     # liste de la position initiale de toutes les sphères
     List_Position_Atom.append(vec(x,y,z))
 
@@ -75,37 +79,59 @@ for Atom_1 in range(Natoms):
     pz = 0
     List_Momentum_Atoms.append(vector(px,py,pz)) # liste de la quantité de mouvement initiale de toutes les sphères
 
+
+for coeur_1 in range(Ncoeurs):
+    idx = Atom_1 + coeur_1
+    # reparti les coeurs ioniques dans la boîte uniformément
+    assert np.sqrt(Ncoeurs) % 1 == 0, "Le nombre de coeurs ioniques doit être un carré parfait"
+    x_ionique = (L/2 - (coeur_1 % np.sqrt(Ncoeurs)) * L/np.sqrt(Ncoeurs)) - ((L/2) / np.sqrt(Ncoeurs))
+    y_ionique = (L/2 - (coeur_1 // np.sqrt(Ncoeurs)) * L/np.sqrt(Ncoeurs)) - ((L/2) / np.sqrt(Ncoeurs))
+    z_ionique = 0
+    List_Index_Atom.append(idx)
+    List_Atoms_Obj.append(simple_sphere(pos=vector(x_ionique,y_ionique,z_ionique), radius=0.03, color=color.red)) #, make_trail=True, retain=100, trail_radius=0.3*Ratom))
+    List_Position_Atom.append(vec(x_ionique,y_ionique,z_ionique))
+    List_Momentum_Atoms.append(vector(0,0,0))
+
 #### FONCTION POUR IDENTIFIER LES COLLISIONS, I.E. LORSQUE LA DISTANCE ENTRE LES CENTRES DE 2 SPHÈRES EST À LA LIMITE DE S'INTERPÉNÉTRER ####
 def checkCollisions() -> list[tuple[int, int]]:
     hitlist = []   # initialisation
-    r2 = 2*Ratom   # distance critique où les 2 sphères entre en contact à la limite de leur rayon
+    r2 = Ratom + Rcoeur   # distance critique où les 2 sphères entre en contact à la limite de leur rayon
     r2 *= r2   # produit scalaire pour éviter une comparaison vectorielle ci-dessous
     for i in range(Natoms):
         ai = List_Position_Atom[i]
-        for j in range(i) :
-            aj = List_Position_Atom[j]
-            dr = ai - aj   # la boucle dans une boucle itère pour calculer cette distance vectorielle dr entre chaque paire de sphère
-            if mag2(dr) < r2:   # test de collision où mag2(dr) qui retourne la norme élevée au carré de la distance intersphère dr
-                hitlist.append((i,j)) # liste numérotant toutes les paires de sphères en collision
+        for j in range(Ncoeurs):  #On compare chaque atome avec chaque coeur ionique
+            aj = List_Position_Atom[j + Natoms]
+            dr = ai - aj
+            if mag2(dr) < r2:
+                hitlist.append((i,j + Natoms))
+
     return hitlist
 
 #### BOUCLE PRINCIPALE POUR L'ÉVOLUTION TEMPORELLE DE PAS dt ####
 ## ATTENTION : la boucle laisse aller l'animation aussi longtemps que souhaité, assurez-vous de savoir comment interrompre vous-même correctement (souvent `ctrl+c`, mais peut varier)
 ## ALTERNATIVE : vous pouvez bien sûr remplacer la boucle "while" par une boucle "for" avec un nombre d'itérations suffisant pour obtenir une bonne distribution statistique à l'équilibre
 
-c = 0 
-while c < 200:
-    rate(300)  # limite la vitesse de calcul de la simulation pour que l'animation soit visible à l'oeil humain!
+momentum_averages = []
+momentum_one_particle = []
+
+j = 10000 # nombre d'itérations
+for _ in tqdm(range(j)):
+    #rate(300)  # limite la vitesse de calcul de la simulation pour que l'animation soit visible à l'oeil humain!
 
     #### DÉPLACE TOUTES LES SPHÈRES D'UN PAS SPATIAL deltax
     List_Vitesse_Atoms: list[vector] = []   # vitesse instantanée de chaque sphère
     List_Ajout_Distance: list[vector] = []  # pas de position de chaque sphère correspondant à l'incrément de temps dt
     for Atom_1 in List_Index_Atom:
-        List_Vitesse_Atoms.append(List_Momentum_Atoms[Atom_1]/mass)   # par définition de la quantité de nouvement pour chaque sphère
-        List_Ajout_Distance.append(List_Vitesse_Atoms[Atom_1] * dt)   # différence avant pour calculer l'incrément de position
+        if Atom_1 < Natoms:
+            List_Vitesse_Atoms.append(List_Momentum_Atoms[Atom_1]/mass)   # par définition de la quantité de nouvement pour chaque sphère
+            List_Ajout_Distance.append(List_Vitesse_Atoms[Atom_1] * dt)   # différence avant pour calculer l'incrément de position
 
-        # nouvelle position de l'atome après l'incrément de temps dt
-        List_Atoms_Obj[Atom_1].pos = List_Position_Atom[Atom_1] = List_Position_Atom[Atom_1] + List_Ajout_Distance[Atom_1]  
+            # nouvelle position de l'atome après l'incrément de temps dt
+            List_Atoms_Obj[Atom_1].pos = List_Position_Atom[Atom_1] = List_Position_Atom[Atom_1] + List_Ajout_Distance[Atom_1] 
+        else:
+            List_Vitesse_Atoms.append(vector(0,0,0))
+
+
 
     #### CONSERVE LA QUANTITÉ DE MOUVEMENT AUX COLLISIONS AVEC LES MURS DE LA BOÎTE ####
     for Atom_1 in List_Index_Atom:
@@ -124,6 +150,16 @@ while c < 200:
                 List_Momentum_Atoms[Atom_1].y =  -abs(List_Momentum_Atoms[Atom_1].y)  # renverse composante y au mur du haut
 
 
+    momentum_average = 0
+    for idx in range(Natoms):
+        momentum_average += mag(List_Momentum_Atoms[idx])
+    momentum_average /= Natoms
+
+    momentum_averages.append(momentum_average)
+    momentum_one_particle.append(mag(List_Momentum_Atoms[0]))
+
+    T = (momentum_average**2) / (mass * DIM * k)  # température moyenne de l'ensemble de particules
+
     #### LET'S FIND THESE COLLISIONS!!! ####
     hitlist: list[tuple[int, int]] = checkCollisions()
 
@@ -133,41 +169,25 @@ while c < 200:
 
         # définition de nouvelles variables pour chaque paire de sphères en collision
         # extraction du numéro des 2 sphères impliquées à cette itération
-        Atom_1 = hit[0]  
-        Atom_2 = hit[1]
+        electron = hit[0]  
+        coeur = hit[1]
 
-        ptot = List_Momentum_Atoms[Atom_1]+List_Momentum_Atoms[Atom_2]   # quantité de mouvement totale des 2 sphères
-        mtot = 2*mass    # masse totale des 2 sphères
-        Vcom = ptot/mtot   # vitesse du référentiel barycentrique/center-of-momentum (com) frame
-        posi = List_Position_Atom[Atom_1]   # position de chacune des 2 sphères
-        posj = List_Position_Atom[Atom_2]
-        vi = List_Momentum_Atoms[Atom_1]/mass   # vitesse de chacune des 2 sphères
-        vj = List_Momentum_Atoms[Atom_2]/mass
-        rrel = posi-posj  # vecteur pour la distance entre les centres des 2 sphères
-        vrel = vj-vi   # vecteur pour la différence de vitesse entre les 2 sphères
+        pos_electron = List_Position_Atom[electron]
+        pos_coeur = List_Position_Atom[coeur]
+        momentum_electron = List_Momentum_Atoms[electron]
+        momentum_electron_norm = mag(momentum_electron)
 
-        # exclusion de cas où il n'y a pas de changements à faire
-        if vrel.mag2 == 0: continue  # exactly same velocities si et seulement si le vecteur vrel devient nul, la trajectoire des 2 sphères continue alors côte à côte
-        if rrel.mag > Ratom: continue  # one atom went all the way through another, la collision a été "manquée" à l'intérieur du pas deltax
+        new_momentum_electron_norm = mass * np.random.rayleigh(scale=np.sqrt(k * T / mass), size=1)  # collision inélastique avec le coeur ionique
 
-        # calcule la distance et temps d'interpénétration des sphères dures qui ne doit pas se produire dans ce modèle
-        dx = dot(rrel, vrel.hat)       # rrel.mag*cos(theta) où theta is the angle between vrel and rrel:
-        dy = cross(rrel, vrel.hat).mag # rrel.mag*sin(theta)
-        alpha = asin(dy/(2*Ratom))  # alpha is the angle of the triangle composed of rrel, path of atom j, and a line from the center of atom i to the center of atom j where atome j hits atom i
-        d = (2*Ratom)*cos(alpha)-dx # distance traveled into the atom from first contact
-        deltat = d/vrel.mag         # time spent moving from first contact to position inside atom
+        theta = np.random.uniform(0, 2 * np.pi)
+        new_p_x_electron = new_momentum_electron_norm * np.cos(theta)
+        new_p_y_electron = new_momentum_electron_norm * np.sin(theta)
+        new_p_z_electron = 0
 
-        #### CHANGE L'INTERPÉNÉTRATION DES SPHÈRES PAR LA CINÉTIQUE DE COLLISION ####
-        posi = posi-vi*deltat   # back up to contact configuration
-        posj = posj-vj*deltat
-        pcomi = List_Momentum_Atoms[Atom_1]-mass*Vcom  # transform momenta to center-of-momentum (com) frame
-        pcomj = List_Momentum_Atoms[Atom_2]-mass*Vcom
-        rrel = hat(rrel)    # vecteur unitaire aligné avec rrel
-        pcomi = pcomi-2*dot(pcomi,rrel)*rrel # bounce in center-of-momentum (com) frame
-        pcomj = pcomj-2*dot(pcomj,rrel)*rrel
-        List_Momentum_Atoms[Atom_1] = pcomi+mass*Vcom # transform momenta back to lab frame
-        List_Momentum_Atoms[Atom_2] = pcomj+mass*Vcom
-        List_Position_Atom[Atom_1] = posi+(List_Momentum_Atoms[Atom_1]/mass)*deltat # move forward deltat in time, ramenant au même temps où sont rendues les autres sphères dans l'itération
-        List_Position_Atom[Atom_2] = posj+(List_Momentum_Atoms[Atom_2]/mass)*deltat
+        new_momentum_electron = vector(new_p_x_electron.item(), new_p_y_electron.item(), new_p_z_electron)
 
-    c += 1
+        List_Momentum_Atoms[electron] = new_momentum_electron
+
+        List_Momentum_Atoms[coeur] = vector(0,0,0)  # le coeur ionique reste immobile
+
+        List_Position_Atom[electron] = pos_electron + List_Momentum_Atoms[electron]/mass * dt
