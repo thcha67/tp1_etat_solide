@@ -2,6 +2,7 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
+from skimage.feature import peak_local_max
 
 mic_idxs = [1, 2, 3]
 
@@ -21,6 +22,12 @@ for im in images[:]:
     fft = np.fft.fft2(im)
     fft = np.fft.fftshift(fft)
 
+    # Log scale for better visualization
+    fft_magnitude = np.abs(fft)
+    sigma = 4 
+    filtered_fft = gaussian_filter(fft_magnitude, sigma=sigma)
+    fft_log = np.log(filtered_fft + 1)
+
     # Apply a Gaussian filter in Fourier space
     sigma = 2  # Adjust sigma to control filtering strength
     filtered_fft = gaussian_filter(np.abs(fft), sigma=sigma)
@@ -35,6 +42,18 @@ for im in images[:]:
     plt.subplot(1,2,2)
     plt.title("Filtered Diffraction Pattern")
     plt.imshow(np.log(1 + np.abs(filtered_fft)), cmap='gray')
+    plt.show()
+
+    # Find local maxima in the FFT image (spots)
+    # Use a threshold to avoid detecting noise
+    threshold = np.percentile(fft_log, 99.2)  # Can adjust this as needed
+    spots = peak_local_max(fft_log, min_distance=20, threshold_abs=threshold)
+
+    # Display the identified spots
+    plt.figure(figsize=(6, 6))
+    plt.imshow(fft_log, cmap='gray')
+    plt.scatter(spots[:, 1], spots[:, 0], color='red', s=20)  # Plot spots
+    plt.title("Identified Spots in FFT")
     plt.show()
 
     ### TODO : Link Pattern to what is requested in the TP
