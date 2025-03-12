@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
 from skimage.feature import peak_local_max
 
-mic_idxs = [1, 2, 3]
+mic_idxs = [2, 3, 4]
 
 path = Path(f"tp2/data/")
 
@@ -24,14 +24,9 @@ for im in images[-1:]:
 
     # Log scale for better visualization
     fft_magnitude = np.abs(fft)
-    sigma = 4 
+    sigma = 4
     filtered_fft = gaussian_filter(fft_magnitude, sigma=sigma)
     fft_log = np.log(filtered_fft + 1)
-
-    # Apply a Gaussian filter in Fourier space
-    sigma = 2  # Adjust sigma to control filtering strength
-    filtered_fft = gaussian_filter(np.abs(fft), sigma=sigma)
-
 
     # Display results
     plt.figure(figsize=(10,5))
