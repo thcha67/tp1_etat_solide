@@ -14,7 +14,7 @@ images = [plt.imread(f) for f in tif_files]
 
 # fft of each image
 
-for im in images[:]:
+for im in images[-1:]:
 
     plt.imshow(im)
     plt.show()
@@ -48,15 +48,26 @@ for im in images[:]:
     # Use a threshold to avoid detecting noise
     threshold = np.percentile(fft_log, 99.2)  # Can adjust this as needed
     spots = peak_local_max(fft_log, min_distance=20, threshold_abs=threshold)
+    print(spots)
 
     # Display the identified spots
     plt.figure(figsize=(6, 6))
     plt.imshow(fft_log, cmap='gray')
     plt.scatter(spots[:, 1], spots[:, 0], color='red', s=20)  # Plot spots
-    plt.title("Identified Spots in FFT")
+    # Annotate each point with its coordinates
+    for i, (y_val, x_val) in enumerate(spots):
+        #plt.text(x_val, y_val - 15, f"({x_val},{y_val})", fontsize=12 , color='red', ha = "center")
+        pass
+    plt.title("Reciprocal Lattice")
+    plt.xlabel("Pixels [-]", fontsize = 14)
+    plt.ylabel("Pixels [-]", fontsize = 14)
     plt.show()
 
     ### TODO : Link Pattern to what is requested in the TP
+
+    #1 Rectangulaire
+    #2
+    #3 Oblique
 
     """
 
